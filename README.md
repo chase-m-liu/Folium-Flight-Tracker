@@ -1,6 +1,9 @@
-# How to use
+#Folium Flight Tracker
+A customizable flight tracker built with Folium and Flask, featuring a dynamic plane marker that rotates in the direction of flight.
 
-1. Sign up with airlabs.co and get a flight data key
-2. Change the variable "url" with your flight key
-3. Input center_lat and center_lon with your desired mid-point
-4. Once you run the program you will be asked for the number of flights to search and the search radius (If it gives you an error it means the program couldn't find anything with your requirements. Just run the program again and put different ones!)
+#How to Use
+
+1. Sign up at airlabs.co to obtain a flight data key.
+2. Replace the "url" variable with your flight data key.
+3. Set the "center_lat" and "center_lon" variables to your desired mid-point coordinates.
+4. Run the program and provide the number of flights to search for and the search radius. If an error occurs, try adjusting these values and rerun the program.
