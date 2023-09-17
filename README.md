@@ -1,7 +1,8 @@
-#Folium-Flight-Tracker
+<h1>Folium Flight Tracker</h1>
+
 A customizable flight tracker built with Folium and Flask, featuring a dynamic plane marker that rotates in the direction of flight.
 
-#How to Use
+<h1>How to Use</h1>
 
 1. Sign up at airlabs.co to obtain a flight data key.
 2. Replace the "url" variable with your flight data key.
