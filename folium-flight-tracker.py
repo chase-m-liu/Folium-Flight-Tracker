@@ -1,91 +1,144 @@
 import requests
 import pandas as pd
-import plotly.express as px
 import csv
 from math import radians, cos, sin, asin, sqrt
+from flask import Flask
+import folium
+import folium.plugins as plugins
 
-#change this
-url = "AIR LABS KEY (airlabs.co)"
+app = Flask(__name__)
+
+# change this
+url = "YOUR AIRLABS.CO API KEY"
 
 response = requests.get(url)
-response_dict = response.json()['response']
+response_dict = response.json()["response"]
 
 header_written = False
-num_of_flights = int(input('Number of flights: '))
-distance_from_home = int(input('Search radius: '))
+num_of_flights = int(input("Number of flights: "))
+distance_from_home = int(input("Search radius: "))
 flights = 0
 
-#change this
+# change this
 center_lat = YOUR_LAT
 center_lon = YOUR_LON
 
 earth_radius_miles = 3963
 earth_radius_km = 6371
 
-#from geeksforgeeks.org/program-distance-two-points-earth/
+
+# from geeksforgeeks.org/program-distance-two-points-earth/
 def distance_between_two_latlon(lat1, lon1, lat2, lon2):
-     
     # The math module contains a function named
     # radians which converts from degrees to radians.
     lon1 = radians(lon1)
     lon2 = radians(lon2)
     lat1 = radians(lat1)
     lat2 = radians(lat2)
-      
+
     # Haversine formula
     dlon = lon2 - lon1
     dlat = lat2 - lat1
-    a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
- 
+    a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+
     c = 2 * asin(sqrt(a))
 
-    #use earth_radius_km for kilometers
+    # use earth_radius_km for kilometers
     r = earth_radius_miles
-      
-    # calculate the result
-    return(c * r)
 
-#creates "flight_data" csv file
-with open('flight_data.csv', 'w') as f:
-    #loops through the data in the data dictionary
+    # calculate the result
+    return c * r
+
+
+# creates "flight_data" csv file
+with open("flight_data.csv", "w") as f:
+    # loops through the data in the data dictionary
     for data in response_dict:
-        #check if the airplane is in the air. If so, check if the distance is between the plane and you is close enough
-        if 'status' in data.keys() and data['status'] == 'en-route' and distance_between_two_latlon(center_lat, center_lon, data['lat'], data['lng']) < distance_from_home:
-            #checks if the amount of flights you inputed is less than the flights looped
+        # check if the airplane is in the air. If so, check if the distance is between the plane and you is close enough
+        if (
+            distance_between_two_latlon(
+                center_lat, center_lon, data["lat"], data["lng"]
+            )
+            < distance_from_home
+        ):
+            # checks if the amount of flights you inputed is less than the flights looped
             if flights <= num_of_flights:
-                #initiate the csv writer
+                # initiate the csv writer
                 w = csv.DictWriter(f, data.keys())
-                #write a header if it hasnt been written yet.
+                # write a header if it hasnt been written yet.
                 if not header_written:
                     w.writeheader()
 
-                #write data
+                # write data
                 w.writerow(data)
 
-                #make sure we don't repeat headers and loop through too many flights.
+                # make sure we don't repeat headers and loop through too many flights.
                 header_written = True
                 flights += 1
 
 
-#read flight data csv
+# read flight data csv
 flight_data = pd.read_csv("flight_data.csv")
 
-#initiate our plotly scatter mapbox
-fig = px.scatter_mapbox(
-    flight_data, 
-    lat="lat", 
-    lon="lng", 
-    #you can change this to whatever you want. hex, reg_number, flag, lat, lng, alt, dir, speed, v_speed, squawk, 
-    #flight_number, flight_icao, flight_iata, dep_icao, dep_iata, arr_icao, arr_iata, airline_icao, airline_iata, 
-    #aircraft_icao, updated, status (to list them all)
-    hover_name="flight_icao", 
-    color_discrete_sequence=["fuchsia"], 
-    size_max=100,
-    zoom=5, 
-    height=1000
+# you can add whatever you want to keys that will be looked at in the csv file. hex, reg_number, flag, lat, lng, alt, dir, speed, v_speed, squawk,
+# flight_number, flight_icao, flight_iata, dep_icao, dep_iata, arr_icao, arr_iata, airline_icao, airline_iata,
+# aircraft_icao, updated, status (to list them all)
+keys = (
+    "lat",
+    "lng",
+    "flight_icao",
+    "dir",
+    "alt",
+    "arr_iata",
+    "aircraft_icao",
+    "dep_iata",
 )
+flight_records = []
 
-#open the map and show it
-fig.update_layout(mapbox_style="open-street-map")
-fig.update_layout(margin={"r":0,"t":0,"l":0,"b":0})
-fig.show()
+# read the csv file and add all the data we want into a dictionary.
+with open("flight_data.csv", "r") as csvfile:
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        flight_records.append({key: row[key] for key in keys})
+
+
+@app.route("/")
+def map_marker():
+    map = folium.Map(
+        location=[center_lat, center_lon],
+        # there are other tiles you can use such as openstreetmap.
+        tiles="Stamen Terrain",
+        zoom_start=20,
+    )
+
+    for flight in flight_records:
+        coords = (flight["lat"], flight["lng"])
+
+        # define our plane icon and the custom settings
+        plane_icon = plugins.BeautifyIcon(
+            icon="plane",
+            border_color="transparent",
+            background_color="transparent",
+            border_width=1,
+            text_color="blue",
+            inner_icon_style="margin:0px;font-size:2em;transform: rotate({0}deg);".format(
+                float(flight["dir"]) - 90
+            ),
+        )
+        # to add more data when you click a flight, add another %s. Then in the parentheses add the data you want to inset. EXAMPLE: "Altitude: %s \n Direction: %s \n From: %s" % (flight['alt'], flight['dir'], flight['dep_iata'])
+        folium.Marker(
+            coords,
+            tooltip=flight["flight_icao"],
+            icon=plane_icon,
+            popup="Altitude: %s \n Direction: %s" 
+            % (
+                flight["alt"], 
+                flight["dir"]
+                )
+        ).add_to(map)
+
+    return map._repr_html_()
+
+
+# run the app
+app.run(debug=True)
