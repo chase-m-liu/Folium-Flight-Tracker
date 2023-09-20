@@ -8,8 +8,26 @@ import folium.plugins as plugins
 
 app = Flask(__name__)
 
-# change this
+#START OF CUSTOMIZATION SECTION
 url = "YOUR AIRLABS.CO API KEY"
+
+#this is for the deafult coloring of the planes
+default_color = 'gray'
+
+#just an example for the airports in the DCA area. Make sure to add a duplicate set for icaos with a "K" at the beginning!
+airport_colors = {
+    'DCA': 'green',
+    'IAD': 'blue',
+    'BWI': 'purple',
+    'KDCA': 'green',
+    'KIAD': 'blue',
+    'KBWI': 'purple',
+    'other': 'gray',
+}
+
+center_lat = YOUR_LAT
+center_lon = YOUR_LON
+#END OF CUSTOMIZATION SECTION
 
 response = requests.get(url)
 response_dict = response.json()["response"]
@@ -18,10 +36,6 @@ header_written = False
 num_of_flights = int(input("Number of flights: "))
 distance_from_home = int(input("Search radius: "))
 flights = 0
-
-# change this
-center_lat = YOUR_LAT
-center_lon = YOUR_LON
 
 earth_radius_miles = 3963
 earth_radius_km = 6371
@@ -92,6 +106,7 @@ keys = (
     "arr_iata",
     "aircraft_icao",
     "dep_iata",
+    "speed",
 )
 flight_records = []
 
@@ -112,17 +127,44 @@ def map_marker():
     )
 
     for flight in flight_records:
-        coords = (flight["lat"], flight["lng"])
+        coords = (flight['lat'], flight['lng'])
 
+        #Gets the departure airport and the arrival airport. (Private jetts and other airplanes with no flight number won't some data shared to the public. That causes the dep_iata or arr_iata to sometimes be en-route or something)
+        dep_iata = flight['dep_iata'] if flight['dep_iata'] is not None else 'other'
+        arr_iata = flight['arr_iata'] if flight['arr_iata'] is not None else 'other'
+
+        #default color. you can change this by going to the "default_color variable up top"
+        color = default_color
+
+        #check to see if the color is in the airport_colors dictionary
+        if dep_iata in airport_colors.keys():
+            #changes the color to the respected color of the airprot
+            dep_color = airport_colors.get(dep_iata)
+        else:
+            #make the color the default
+            dep_color = default_color
+
+        #same thing here except for arrival iatas
+        if arr_iata in airport_colors.keys():
+            arr_color = airport_colors.get(arr_iata)
+        else:
+            arr_color = default_color
+
+        #changes the planes color
+        if dep_color != default_color:
+            color = dep_color
+        elif arr_color != default_color:
+            color = arr_color
+            
         # define our plane icon and the custom settings
         plane_icon = plugins.BeautifyIcon(
             icon="plane",
             border_color="transparent",
             background_color="transparent",
             border_width=1,
-            text_color="blue",
+            text_color=color,
             inner_icon_style="margin:0px;font-size:2em;transform: rotate({0}deg);".format(
-                float(flight["dir"]) - 90
+                float(flight["dir"]) - 90 if float(flight["dir"]) - 90 is not None else 'No data'
             ),
         )
         # to add more data when you click a flight, add another %s. Then in the parentheses add the data you want to inset. EXAMPLE: "Altitude: %s \n Direction: %s \n From: %s" % (flight['alt'], flight['dir'], flight['dep_iata'])
@@ -130,15 +172,15 @@ def map_marker():
             coords,
             tooltip=flight["flight_icao"],
             icon=plane_icon,
-            popup="Altitude: %s \n Direction: %s" 
+            popup="Altitude: %s \n Direction: %s \n Speed (knots): %s" 
             % (
                 flight["alt"], 
-                flight["dir"]
-                )
+                flight["dir"],
+                round(float(flight["speed"]) * 0.539957, 2),
+            )
         ).add_to(map)
 
     return map._repr_html_()
-
 
 # run the app
 app.run(debug=True)
