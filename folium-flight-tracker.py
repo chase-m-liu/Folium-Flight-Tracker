@@ -157,28 +157,54 @@ def map_marker():
             color = arr_color
             
         # define our plane icon and the custom settings
-        plane_icon = plugins.BeautifyIcon(
-            icon="plane",
-            border_color="transparent",
-            background_color="transparent",
-            border_width=1,
-            text_color=color,
-            inner_icon_style="margin:0px;font-size:2em;transform: rotate({0}deg);".format(
-                float(flight["dir"]) - 90 if float(flight["dir"]) - 90 is not None else 'No data'
-            ),
-        )
-        # to add more data when you click a flight, add another %s. Then in the parentheses add the data you want to inset. EXAMPLE: "Altitude: %s \n Direction: %s \n From: %s" % (flight['alt'], flight['dir'], flight['dep_iata'])
-        folium.Marker(
-            coords,
-            tooltip=flight["flight_icao"],
-            icon=plane_icon,
-            popup="Altitude: %s \n Direction: %s \n Speed (knots): %s" 
-            % (
-                flight["alt"], 
-                flight["dir"],
-                round(float(flight["speed"]) * 0.539957, 2),
+        try: 
+            plane_icon = plugins.BeautifyIcon(
+                icon="plane",
+                border_color="transparent",
+                background_color="transparent",
+                border_width=1,
+                text_color=color,
+                inner_icon_style="margin:0px;font-size:2em;transform: rotate({0}deg);".format(               
+                    float(flight["dir"]) - 90
+                ),
             )
-        ).add_to(map)
+        except:
+            plane_icon = plugins.BeautifyIcon(
+                icon="plane",
+                border_color="transparent",
+                background_color="transparent",
+                border_width=1,
+                text_color=color,
+                inner_icon_style="margin:0px;font-size:2em;"
+            )
+
+            flight["dir"] = "No data"
+            
+        # to add more data when you click a flight, add another %s. Then in the parentheses add the data you want to inset. EXAMPLE: "Altitude: %s \n Direction: %s \n From: %s" % (flight['alt'], flight['dir'], flight['dep_iata'])
+        try: 
+            folium.Marker(
+                coords,
+                tooltip=flight["flight_icao"],
+                icon=plane_icon,
+                popup="Altitude: %s \n Direction: %s \n Speed (knots): %s" 
+                % (
+                    flight["alt"], 
+                    flight["dir"],
+                    round(float(flight["speed"]) * 0.539957, 2),
+                )
+            ).add_to(map)
+        except:
+            folium.Marker(
+                coords,
+                tooltip=flight["flight_icao"],
+                icon=plane_icon,
+                popup="Altitude: %s \n Direction: %s \n Speed (knots): %s" 
+                % (
+                    flight["alt"], 
+                    flight["dir"],
+                    "No data"
+                ),
+            ).add_to(map)
 
     return map._repr_html_()
 
